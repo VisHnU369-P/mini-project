@@ -1,0 +1,7 @@
+CREATE TABLE IF NOT EXISTS links (
+  code VARCHAR(8) PRIMARY KEY,
+  target TEXT NOT NULL,
+  clicks INTEGER NOT NULL DEFAULT 0,
+  last_clicked TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);

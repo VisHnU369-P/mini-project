@@ -1,0 +1,12 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* small extras */
+.body-bg { @apply bg-gray-50 min-h-screen; }
+.card { @apply bg-white p-4 rounded-2xl shadow-sm; }
+.muted { @apply text-gray-500; }
+.label { @apply text-sm font-medium mb-1; }
+.input { @apply border rounded-lg p-2 w-full; }
+.small-error { @apply text-red-600 text-sm mt-1; }
+.copy-btn { @apply bg-blue-600 text-white px-3 py-1 rounded-lg; }
