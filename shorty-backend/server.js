@@ -13,7 +13,15 @@ const codeRegex = /^[A-Za-z0-9]{6,8}$/;
 const gen = customAlphabet('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz', 6);
 const cors = require('cors');
 
-app.use(cors({ origin: process.env.FRONTEND_ORIGIN || 'http://localhost:5173' }));
+app.use(cors({
+  origin: [
+    'http://localhost:5173',
+    'https://mini-project-production-d8d2.up.railway.app'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'DELETE', 'OPTIONS']
+}));
+
 
 
 app.use(helmet());
