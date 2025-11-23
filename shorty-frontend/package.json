@@ -2,11 +2,11 @@
   "name": "shorty-frontend",
   "version": "1.0.0",
   "private": true,
-    "scripts": {
+  "scripts": {
     "dev": "vite",
-    "build": "CI=false vite build --mode production",
-    "start": "vite preview --port 3000 --host"
-    },
+    "build": "vite build",
+    "start": "vite preview --host --port $PORT"
+  },
   "dependencies": {
     "axios": "^1.4.0",
     "react": "^18.2.0",
