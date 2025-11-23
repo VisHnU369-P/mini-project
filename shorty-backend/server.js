@@ -53,10 +53,41 @@ app.get('/healthz', async (req, res) => {
   try {
     // Test database connection
     await pool.query('SELECT 1');
-    res.json({ ok: true, version: '1.0', database: 'connected' });
+    
+    // Check if table exists
+    const tableCheck = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'links'
+      )
+    `);
+    
+    const tableExists = tableCheck.rows[0].exists;
+    
+    res.json({ 
+      ok: true, 
+      version: '1.0', 
+      database: 'connected',
+      table_exists: tableExists,
+      env: {
+        has_database_url: !!process.env.DATABASE_URL,
+        node_env: process.env.NODE_ENV
+      }
+    });
   } catch (err) {
     console.error('Health check failed:', err);
-    res.status(503).json({ ok: false, version: '1.0', database: 'disconnected', error: err.message });
+    res.status(503).json({ 
+      ok: false, 
+      version: '1.0', 
+      database: 'disconnected', 
+      error: err.message,
+      code: err.code,
+      env: {
+        has_database_url: !!process.env.DATABASE_URL,
+        node_env: process.env.NODE_ENV
+      }
+    });
   }
 });
 
@@ -120,11 +151,39 @@ app.get('/api/links', async (req, res) => {
   } catch (err) {
     console.error('Error in GET /api/links:', err.message);
     console.error('Full error:', err);
-    // Return more detailed error in development, generic in production
-    const errorMessage = process.env.NODE_ENV === 'production' 
-      ? 'server-error' 
-      : err.message || 'server-error';
-    res.status(500).json({ error: errorMessage, details: process.env.NODE_ENV !== 'production' ? err.stack : undefined });
+    console.error('Error code:', err.code);
+    console.error('Error detail:', err.detail);
+    
+    // Check if it's a database connection error
+    if (err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND' || err.message?.includes('connect')) {
+      return res.status(503).json({ 
+        error: 'database-connection-error',
+        message: 'Unable to connect to database. Please check DATABASE_URL configuration.'
+      });
+    }
+    
+    // Check if table doesn't exist
+    if (err.code === '42P01' || err.message?.includes('does not exist')) {
+      console.error('Table does not exist, attempting to create...');
+      try {
+        await initializeDatabase();
+        // Retry the query
+        const { rows } = await pool.query('SELECT code, target, clicks, last_clicked, created_at FROM links ORDER BY created_at DESC');
+        return res.json({ links: rows });
+      } catch (initErr) {
+        console.error('Failed to initialize table:', initErr);
+        return res.status(500).json({ 
+          error: 'database-init-error',
+          message: 'Failed to initialize database table'
+        });
+      }
+    }
+    
+    // Return error type and message for better debugging
+    res.status(500).json({ 
+      error: err.code || 'server-error',
+      message: err.message || 'An unexpected error occurred'
+    });
   }
 });
 
