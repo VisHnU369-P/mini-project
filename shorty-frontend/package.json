@@ -2,13 +2,14 @@
   "name": "shorty-frontend",
   "version": "1.0.0",
   "private": true,
-"scripts": {
-  "dev": "vite",
-  "build": "node ./node_modules/vite/bin/vite.js build",
-  "postinstall": "chmod +x ./node_modules/.bin/vite || true",
-  "start": "vite preview --host --port $PORT"
-},
+  "scripts": {
+    "dev": "vite",
+    "build": "node ./node_modules/vite/bin/vite.js build",
+    "postinstall": "chmod +x ./node_modules/.bin/vite || true",
+    "start": "vite preview --host --port $PORT"
+  },
   "dependencies": {
+    "@vitejs/plugin-react": "^5.1.1",
     "axios": "^1.4.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
