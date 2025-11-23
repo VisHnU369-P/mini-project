@@ -2,7 +2,7 @@
 const express = require('express');
 const helmet = require('helmet');
 const morgan = require('morgan');
-const { pool } = require('./lib/db');
+const { pool, initializeDatabase } = require('./lib/db');
 const { customAlphabet } = require('nanoid');
 require('dotenv').config();
 
@@ -48,9 +48,16 @@ app.use(helmet());
 app.use(morgan('dev'));
 app.use(express.json());
 
-// Health
-app.get('/healthz', (req, res) => {
-  res.json({ ok: true, version: '1.0' });
+// Health check
+app.get('/healthz', async (req, res) => {
+  try {
+    // Test database connection
+    await pool.query('SELECT 1');
+    res.json({ ok: true, version: '1.0', database: 'connected' });
+  } catch (err) {
+    console.error('Health check failed:', err);
+    res.status(503).json({ ok: false, version: '1.0', database: 'disconnected', error: err.message });
+  }
 });
 
 // Helper DB queries
@@ -96,8 +103,12 @@ app.post('/api/links', async (req, res) => {
     );
     return res.status(201).json({ code: finalCode, target, clicks: 0, last_clicked: null, created_at });
   } catch (err) {
-    console.error(err);
-    return res.status(500).json({ error: 'server-error' });
+    console.error('Error in POST /api/links:', err.message);
+    console.error('Full error:', err);
+    const errorMessage = process.env.NODE_ENV === 'production' 
+      ? 'server-error' 
+      : err.message || 'server-error';
+    return res.status(500).json({ error: errorMessage, details: process.env.NODE_ENV !== 'production' ? err.stack : undefined });
   }
 });
 
@@ -107,8 +118,13 @@ app.get('/api/links', async (req, res) => {
     const { rows } = await pool.query('SELECT code, target, clicks, last_clicked, created_at FROM links ORDER BY created_at DESC');
     res.json({ links: rows });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'server-error' });
+    console.error('Error in GET /api/links:', err.message);
+    console.error('Full error:', err);
+    // Return more detailed error in development, generic in production
+    const errorMessage = process.env.NODE_ENV === 'production' 
+      ? 'server-error' 
+      : err.message || 'server-error';
+    res.status(500).json({ error: errorMessage, details: process.env.NODE_ENV !== 'production' ? err.stack : undefined });
   }
 });
 
@@ -164,6 +180,20 @@ app.use((req, res) => {
   res.status(404).json({ error: 'not-found' });
 });
 
-app.listen(PORT, () => {
-  console.log(`Shorty backend listening on port ${PORT}`);
-});
+// Initialize database and start server
+async function startServer() {
+  try {
+    // Initialize database tables
+    await initializeDatabase();
+    
+    // Start server
+    app.listen(PORT, () => {
+      console.log(`Shorty backend listening on port ${PORT}`);
+    });
+  } catch (err) {
+    console.error('Failed to start server:', err);
+    process.exit(1);
+  }
+}
+
+startServer();

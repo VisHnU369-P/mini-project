@@ -8,9 +8,7 @@ let API_BASE = import.meta.env.VITE_API_BASE;
 
 if (!API_BASE) {
   if (import.meta.env.PROD) {
-    // In production, use the backend Railway URL
-    // Frontend: https://mini-project-production-d8d2.up.railway.app
-    // Backend: https://mini-project-production-f4fc.up.railway.app
+ 
     API_BASE = 'https://mini-project-production-f4fc.up.railway.app';
   } else {
     // In development, default to localhost backend
