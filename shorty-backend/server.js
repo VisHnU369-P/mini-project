@@ -21,30 +21,51 @@ const allowedOrigins = process.env.CORS_ORIGINS
       'https://mini-project-production-d8d2.up.railway.app'
     ];
 
-app.use(cors({
+// Normalize origins (remove trailing slashes)
+const normalizedOrigins = allowedOrigins.map(origin => origin.replace(/\/$/, ''));
+
+// CORS configuration
+const corsOptions = {
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
+    if (!origin) {
+      if (process.env.NODE_ENV !== 'production') console.log('CORS: Allowing request with no origin');
+      return callback(null, true);
+    }
     
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    // Normalize origin (remove trailing slash)
+    const normalizedOrigin = origin.replace(/\/$/, '');
+    
+    if (normalizedOrigins.indexOf(normalizedOrigin) !== -1) {
+      if (process.env.NODE_ENV !== 'production') console.log('CORS: Allowing origin:', normalizedOrigin);
       callback(null, true);
     } else {
       // In development, allow localhost origins
-      if (process.env.NODE_ENV !== 'production' && origin.includes('localhost')) {
+      if (process.env.NODE_ENV !== 'production' && normalizedOrigin.includes('localhost')) {
+        console.log('CORS: Allowing localhost origin in development:', normalizedOrigin);
         callback(null, true);
       } else {
-        callback(new Error('Not allowed by CORS'));
+        console.warn('CORS: Blocked origin:', normalizedOrigin);
+        console.warn('CORS: Allowed origins:', normalizedOrigins);
+        callback(new Error(`Origin ${normalizedOrigin} not allowed by CORS`));
       }
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  methods: ['GET', 'POST', 'DELETE', 'OPTIONS', 'PUT', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Length', 'Content-Type'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204
+};
+
+app.use(cors(corsOptions));
+
+// Configure Helmet to not interfere with CORS
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  crossOriginEmbedderPolicy: false
 }));
-
-
-
-app.use(helmet());
 app.use(morgan('dev'));
 app.use(express.json());
 
